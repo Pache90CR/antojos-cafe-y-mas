@@ -8,10 +8,19 @@
 
   const PLACEHOLDER = '/assets/art/placeholder.svg';
   const CART_KEY = 'antojos_cart';
+  const LAST_KEY = 'antojos_last_order'; // el último pedido enviado, por si el cliente no llegó a mandarlo en WhatsApp
   const LOCAL_KEY = 'antojos_menu_local';
+  const PING_KEY = 'antojos_menu_ping'; // el panel lo escribe al guardar: avisa a las demás pestañas de este navegador
   const MAX_QTY = 99;
+  const LAST_TTL = 3 * 3600 * 1000; // el pedido enviado se puede recuperar durante 3 horas
+  const POLL_MS = 20000; // cada cuánto se revisa el menú mientras la página se está viendo
+  const POLL_MAX = 120000; // si el servidor falla, se espera más entre intentos (hasta 2 minutos)
+  const WAKE_GAP = 4000; // mínimo entre dos revisiones inmediatas
 
-  const S = { menu: null, cat: 'todo', q: '', cart: {}, status: null, today: '', toastT: 0, loadedAt: 0 };
+  const S = {
+    menu: null, sig: '', cat: 'todo', q: '', cart: {}, last: null, cartNote: '', status: null, today: '', toastT: 0,
+    busy: false, again: false, pollT: 0, fails: 0, checkedAt: 0
+  };
 
   /* ---------- datos ---------- */
   function safeImg(u) {
@@ -45,26 +54,40 @@
     return null;
   }
 
-  async function loadMenu() {
+  // Descarga el menú del servidor. Devuelve { menu, sig } o null si el servidor no respondió bien:
+  // así un fallo pasajero nunca reemplaza el menú que el cliente está viendo por uno de ejemplo.
+  // Normal: la dirección cambia cada 10 s (?b=), así todos los clientes de esos 10 s comparten una sola lectura.
+  // Inmediata (urgent): lectura directa, sin caché; se usa al volver a la página o cuando el panel acaba de guardar.
+  async function fetchMenu(urgent) {
+    const url = urgent ? '/api/menu?nocache=1&t=' + Date.now() : '/api/menu?b=' + Math.floor(Date.now() / 10000);
     try {
-      const r = await fetch('/api/menu', { headers: { Accept: 'application/json' } });
-      if (r.ok) {
-        const j = await r.json();
-        if (j && j.menu) {
-          // Sin base de datos conectada, el panel guarda en este navegador: así se puede probar el panel.
-          if (j.storage === 'none') {
-            const local = readLocal();
-            if (local) return local;
-          }
-          return j.menu;
-        }
+      const r = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!r.ok) return null;
+      const j = await r.json();
+      if (!j || !j.menu || typeof j.menu !== 'object') return null;
+      if (j.storage === 'error') return null; // la base de datos falló un momento y el servidor mandó el menú de ejemplo
+      let menu = j.menu;
+      // Sin base de datos conectada, el panel guarda en este navegador: así se puede probar el panel.
+      if (j.storage === 'none') {
+        const local = readLocal();
+        if (local) menu = local;
       }
+      return { menu: menu, sig: JSON.stringify(menu) };
     } catch (e) {
-      /* se usa el respaldo */
+      return null;
     }
+  }
+
+  // Carga inicial: si el servidor no responde se usa el menú de respaldo que viene con el sitio.
+  async function loadMenu() {
+    const got = await fetchMenu(false);
+    if (got) return got;
     try {
       const r = await fetch('/data/menu.default.json');
-      if (r.ok) return await r.json();
+      if (r.ok) {
+        const m = await r.json();
+        return { menu: m, sig: JSON.stringify(m) };
+      }
     } catch (e) {
       /* sin respaldo */
     }
@@ -86,6 +109,34 @@
     } catch (e) {
       /* modo privado: el pedido sigue funcionando sin guardarse */
     }
+  }
+
+  function loadLast() {
+    try {
+      const o = JSON.parse(localStorage.getItem(LAST_KEY) || 'null');
+      if (o && typeof o.t === 'number' && o.cart && typeof o.cart === 'object' && !Array.isArray(o.cart)) return o;
+    } catch (e) {
+      /* sin pedido anterior */
+    }
+    return null;
+  }
+
+  function saveLast() {
+    try {
+      if (S.last) localStorage.setItem(LAST_KEY, JSON.stringify(S.last));
+      else localStorage.removeItem(LAST_KEY);
+    } catch (e) {
+      /* modo privado */
+    }
+  }
+
+  // El último pedido enviado, mientras todavía se pueda recuperar.
+  function lastOrder() {
+    if (S.last && Date.now() - S.last.t >= LAST_TTL) {
+      S.last = null;
+      saveLast();
+    }
+    return S.last;
   }
 
   /* ---------- derivados ---------- */
@@ -328,28 +379,41 @@
 
     const body = $('#cartBody');
     const foot = $('#cartFoot');
+    // Aviso dentro del pedido (por ejemplo, un producto que dejó de estar disponible); se quita al tocar el pedido o cerrarlo.
+    const note = S.cartNote ? '<p class="cart-note" role="status">' + esc(S.cartNote) + '</p>' : '';
     if (!lines.length) {
-      body.innerHTML =
-        '<div class="cart-empty"><span class="cart-empty-ic" aria-hidden="true">' + icon('cup', 34) + '</span>' +
-        '<h3>Tu pedido está vacío</h3><p>Agrega algo del menú y aquí verás tu pedido.</p>' +
-        '<a class="cta cta-dk" href="#menu" data-act="close-cart">VER EL MENÚ<span class="cta-ar">' + icon('arrow', 16) + '</span></a></div>';
+      const menuBtn = '<a class="cta cta-dk" href="#menu" data-act="close-cart">VER EL MENÚ<span class="cta-ar">' + icon('arrow', 16) + '</span></a>';
+      if (lastOrder()) {
+        // Recién se envió: el pedido ya salió del carrito. Si no llegó a mandarse en WhatsApp, se puede recuperar.
+        body.innerHTML =
+          note + '<div class="cart-empty"><span class="cart-empty-ic ok" aria-hidden="true">' + icon('check', 34) + '</span>' +
+          '<h3>Tu pedido pasó a WhatsApp</h3><p>Si no llegaste a enviarlo, puedes recuperarlo.</p>' + menuBtn +
+          '<button class="linkbtn" type="button" data-act="restore">Recuperar mi pedido</button></div>';
+      } else {
+        body.innerHTML =
+          note + '<div class="cart-empty"><span class="cart-empty-ic" aria-hidden="true">' + icon('cup', 34) + '</span>' +
+          '<h3>Tu pedido está vacío</h3><p>Agrega algo del menú y aquí verás tu pedido.</p>' + menuBtn + '</div>';
+      }
       foot.hidden = true;
       return;
     }
     const priced = lines.every((l) => A.unitPrice(l.p, S.today) != null);
     const total = lines.reduce((a, l) => a + (priced ? A.unitPrice(l.p, S.today) * l.qty : 0), 0);
-    body.innerHTML = lines
-      .map((l) => {
-        const up = A.unitPrice(l.p, S.today);
-        return (
-          '<div class="line"><div class="line-txt"><p class="line-name">' + esc(l.p.name) + '</p><p class="line-price">' +
-          (up == null ? 'Precio por confirmar' : esc(money(up * l.qty))) + '</p></div>' +
-          '<div class="qty"><button class="step" type="button" data-act="dec" data-id="' + esc(l.p.id) + '" aria-label="Quitar uno: ' + esc(l.p.name) + '">' + icon('minus', 18) + '</button>' +
-          '<b>' + l.qty + '</b>' +
-          '<button class="step" type="button" data-act="inc" data-id="' + esc(l.p.id) + '" aria-label="Agregar uno más: ' + esc(l.p.name) + '">' + icon('plus', 18) + '</button></div></div>'
-        );
-      })
-      .join('');
+    body.innerHTML =
+      note +
+      lines
+        .map((l) => {
+          const up = A.unitPrice(l.p, S.today);
+          return (
+            '<div class="line"><div class="line-txt"><p class="line-name">' + esc(l.p.name) + '</p><p class="line-price">' +
+            (up == null ? 'Precio por confirmar' : esc(money(up * l.qty))) + '</p></div>' +
+            '<div class="qty"><button class="step" type="button" data-act="dec" data-id="' + esc(l.p.id) + '" aria-label="Quitar uno: ' + esc(l.p.name) + '">' + icon('minus', 18) + '</button>' +
+            '<b>' + l.qty + '</b>' +
+            '<button class="step" type="button" data-act="inc" data-id="' + esc(l.p.id) + '" aria-label="Agregar uno más: ' + esc(l.p.name) + '">' + icon('plus', 18) + '</button></div>' +
+            '<button class="rm" type="button" data-act="remove" data-id="' + esc(l.p.id) + '" aria-label="Quitar ' + esc(l.p.name) + ' del pedido">' + icon('close', 16) + '</button></div>'
+          );
+        })
+        .join('');
     foot.hidden = false;
     $('#totalRow').hidden = !priced;
     $('#total').textContent = money(total);
@@ -411,7 +475,7 @@
   }
 
   /* ---------- acciones ---------- */
-  function toast(text, withBtn) {
+  function toast(text, withBtn, ms) {
     $('#toastTxt').textContent = text;
     $('#toastBtn').hidden = !withBtn;
     const t = $('#toast');
@@ -419,7 +483,16 @@
     clearTimeout(S.toastT);
     S.toastT = setTimeout(() => {
       t.hidden = true;
-    }, 2800);
+    }, ms || 2800);
+  }
+
+  // Cuando el cliente toca su pedido empieza uno nuevo: ya no se ofrece recuperar el anterior ni se repite el aviso.
+  function touchCart() {
+    S.cartNote = '';
+    if (S.last) {
+      S.last = null;
+      saveLast();
+    }
   }
 
   function add(id) {
@@ -429,6 +502,7 @@
       toast(closedText());
       return;
     }
+    touchCart();
     S.cart[id] = Math.min(MAX_QTY, (S.cart[id] || 0) + 1);
     saveCart();
     renderCart();
@@ -436,10 +510,58 @@
   }
 
   function change(id, d) {
+    touchCart();
     const n = (S.cart[id] || 0) + d;
     if (n > 0) S.cart[id] = Math.min(MAX_QTY, n);
     else delete S.cart[id];
     saveCart();
+    renderCart();
+  }
+
+  // La ❌ de cada producto: lo quita del pedido de una vez, sin importar cuántas unidades tenga.
+  function removeLine(id) {
+    if (!(S.cart[id] > 0)) return;
+    touchCart();
+    delete S.cart[id];
+    saveCart();
+    renderCart();
+    // El botón que se tocó desaparece al dibujar de nuevo: el foco pasa al siguiente para quien usa teclado.
+    const next = $('#cartBody [data-act="remove"]') || $('#cart .cart-head [data-act="close-cart"]');
+    if (next) next.focus({ preventScroll: true });
+  }
+
+  // El enlace de "Enviar por WhatsApp" ya abrió WhatsApp con el mensaje: el pedido sale del carrito.
+  // Se guarda una copia unas horas por si el cliente no llegó a enviar el mensaje.
+  function orderSent() {
+    const lines = cartLines();
+    if (!lines.length) return;
+    const cart = {};
+    lines.forEach((l) => {
+      cart[l.p.id] = l.qty;
+    });
+    S.last = { t: Date.now(), cart: cart, name: $('#custName').value, notes: $('#custNotes').value };
+    saveLast();
+    S.cart = {};
+    S.cartNote = '';
+    saveCart();
+    $('#custName').value = '';
+    $('#custNotes').value = '';
+    renderCart();
+  }
+
+  function restoreOrder() {
+    const o = lastOrder();
+    if (!o) return;
+    const wanted = Object.keys(o.cart).length;
+    S.cart = Object.assign({}, o.cart);
+    pruneCart(); // el menú pudo cambiar desde entonces
+    const kept = Object.keys(S.cart).length;
+    S.last = null;
+    S.cartNote = kept < wanted ? (kept ? 'Algunos productos ya no están disponibles y no se recuperaron.' : 'Esos productos ya no están disponibles.') : '';
+    saveLast();
+    saveCart();
+    $('#custName').value = typeof o.name === 'string' ? o.name.slice(0, 60) : '';
+    $('#custNotes').value = typeof o.notes === 'string' ? o.notes.slice(0, 300) : '';
     renderCart();
   }
 
@@ -488,10 +610,17 @@
       case 'dec':
         change(t.getAttribute('data-id'), -1);
         break;
+      case 'remove':
+        removeLine(t.getAttribute('data-id'));
+        break;
       case 'clear':
+        touchCart();
         S.cart = {};
         saveCart();
         renderCart();
+        break;
+      case 'restore':
+        restoreOrder();
         break;
       case 'clear-q':
         S.q = '';
@@ -500,7 +629,7 @@
         $('#q').focus();
         break;
       case 'retry':
-        init();
+        init().finally(schedulePoll);
         break;
       default:
     }
@@ -509,13 +638,23 @@
   $('#cart').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeCart();
   });
-  $('#cart').addEventListener('close', () => document.body.classList.remove('lock'));
+  $('#cart').addEventListener('close', () => {
+    document.body.classList.remove('lock');
+    if (S.cartNote) {
+      S.cartNote = '';
+      renderCart(); // el aviso ya se leyó: al volver a abrir el pedido no debe seguir ahí
+    }
+  });
 
   $('#send').addEventListener('click', (e) => {
     if (!canOrder()) {
       e.preventDefault();
       toast(closedText());
+      return;
     }
+    // El enlace abre WhatsApp al terminar este evento (su dirección ya está lista), y de una vez el pedido sale del carrito:
+    // así no se puede enviar dos veces con un doble toque y no depende de que la página siga activa mientras se abre WhatsApp.
+    orderSent();
   });
 
   $('#q').addEventListener('input', (e) => {
@@ -575,31 +714,106 @@
   }
 
   async function init() {
-    const m = await loadMenu();
-    if (!m) {
+    const got = await loadMenu();
+    if (!got) {
       showLoadError();
       return;
     }
-    S.menu = fix(m);
-    S.loadedAt = Date.now();
+    S.menu = fix(got.menu);
+    S.sig = got.sig;
+    S.checkedAt = Date.now();
     S.today = A.crNow().ymd;
     S.cart = loadCart();
+    S.last = loadLast();
     renderStatus();
     pruneCart();
     saveCart();
     renderAll();
   }
 
-  async function refresh() {
-    const m = await loadMenu();
-    if (!m) return;
-    S.menu = fix(m);
-    S.loadedAt = Date.now();
+  // Estado del pedido tal como se ve con el menú actual: producto -> nombre y precio por unidad.
+  function cartState() {
+    const vm = visibleMap();
+    const o = {};
+    Object.keys(S.cart).forEach((id) => {
+      if (S.cart[id] > 0 && vm[id]) o[id] = { name: vm[id].name, price: A.unitPrice(vm[id], S.today) };
+    });
+    return o;
+  }
+
+  // Pone en pantalla un menú nuevo. Si cambió algo del pedido del cliente (un producto que se agotó o se quitó, o un precio),
+  // se lo dice: dentro del pedido si lo tiene abierto, o con un aviso si no.
+  function applyMenu(got) {
+    const before = cartState();
+    S.menu = fix(got.menu);
+    S.sig = got.sig;
     S.today = A.crNow().ymd;
     renderStatus();
     pruneCart();
     saveCart();
+    const after = cartState();
+    const gone = Object.keys(before).filter((id) => !after[id]);
+    const moved = Object.keys(after).some((id) => before[id] && before[id].price !== after[id].price);
+    let note = '';
+    if (gone.length === 1) note = '«' + before[gone[0]].name + '» ya no está disponible y salió de tu pedido.';
+    else if (gone.length > 1) note = 'Algunos productos ya no están disponibles y salieron de tu pedido.';
+    else if (moved) note = 'Actualizamos los precios de tu pedido.';
+    if (note) S.cartNote = note;
     renderAll();
+    if (note && !$('#cart').open) toast(note, true, 6000);
+  }
+
+  // Revisa si el menú cambió y, si es así, lo actualiza sin recargar la página.
+  // urgent = lectura directa sin caché (al volver a la página o cuando el panel acaba de guardar).
+  async function refresh(urgent) {
+    if (S.busy) {
+      if (urgent) S.again = true; // el cambio pudo llegar después de que empezó esta lectura: se repite al terminar
+      return;
+    }
+    S.busy = true;
+    S.checkedAt = Date.now();
+    let ok = false;
+    try {
+      if (!S.menu) {
+        await init(); // todavía no había menú (falló la primera carga): se vuelve a intentar
+        ok = !!S.menu;
+      } else {
+        const got = await fetchMenu(urgent);
+        if (got) {
+          ok = true;
+          if (got.sig !== S.sig) applyMenu(got);
+        }
+      }
+    } catch (e) {
+      ok = false;
+    }
+    S.fails = ok ? 0 : S.fails + 1;
+    S.busy = false;
+    if (S.again) {
+      S.again = false;
+      refresh(true);
+    }
+  }
+
+  // Revisión periódica: cada 20 s mientras la página se está viendo. Con la pantalla apagada o en otra pestaña no se hace nada.
+  function schedulePoll() {
+    clearTimeout(S.pollT);
+    if (document.hidden) return;
+    const wait = Math.min(POLL_MAX, POLL_MS * Math.pow(2, Math.min(S.fails, 3)));
+    S.pollT = setTimeout(async () => {
+      await refresh(false);
+      schedulePoll();
+    }, wait);
+  }
+
+  // Al volver a la página, recuperar la conexión o cuando el panel guardó, se revisa enseguida sin esperar al ciclo.
+  function wake(force) {
+    if (document.hidden) return;
+    if (force || Date.now() - S.checkedAt >= WAKE_GAP) {
+      refresh(true).finally(schedulePoll);
+    } else {
+      schedulePoll();
+    }
   }
 
   // Cada minuto se revisa si el negocio abrió o cerró.
@@ -614,9 +828,19 @@
   }, 60000);
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && S.menu && Date.now() - S.loadedAt > 120000) refresh();
+    if (document.hidden) clearTimeout(S.pollT);
+    else wake(false);
+  });
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) wake(true); // la página volvió desde el historial sin recargarse
+  });
+  window.addEventListener('focus', () => wake(false));
+  window.addEventListener('online', () => wake(true));
+  // El panel (en otra pestaña de este navegador) acaba de guardar: se muestra el cambio de inmediato.
+  window.addEventListener('storage', (e) => {
+    if (e.key === PING_KEY || e.key === LOCAL_KEY) refresh(true).finally(schedulePoll); // también con la pestaña en segundo plano
   });
 
   A.hydrateIcons();
-  init();
+  init().finally(schedulePoll);
 })();

@@ -10,9 +10,9 @@ Sitio web para el café, con un panel privado (`/admin`) donde puedes:
 - definir el **horario** y cerrar el negocio cuando quieras (feriados, vacaciones)
 - cambiar el **WhatsApp** que recibe los pedidos, el nombre, la dirección y el mensaje de pedido
 
-Los clientes eligen sus productos y el sitio abre **WhatsApp con el pedido ya escrito** hacia tu número. El cliente solo toca “Enviar”.
+Los clientes eligen sus productos y el sitio abre **WhatsApp con el pedido ya escrito** hacia tu número. El cliente solo toca “Enviar”. Dentro de su pedido, cada producto tiene **−** y **+** para cambiar la cantidad y una **❌** para quitarlo.
 
-> Todo lo que cambies en el panel se guarda en una base de datos (Upstash Redis, gratis) y se ve en el sitio en unos segundos. No hay que volver a subir nada a GitHub para cambiar el menú.
+> Todo lo que cambies en el panel se guarda en una base de datos (Upstash Redis, gratis) y se ve en el sitio en unos segundos, **sin que nadie tenga que recargar la página**. No hay que volver a subir nada a GitHub para cambiar el menú.
 
 ---
 
@@ -95,12 +95,14 @@ Notas: Sin azúcar
 
 El pedido no llega a ningún servidor: es el cliente quien lo envía desde su WhatsApp. Por eso no verás pedidos “pendientes” en el panel; los verás en tu WhatsApp.
 
+Al tocar **Enviar por WhatsApp**, el pedido sale del carrito del cliente y el panel le muestra “Tu pedido pasó a WhatsApp”. Como el sitio no puede saber si el cliente llegó a tocar “Enviar” dentro de WhatsApp, durante 3 horas queda el botón **Recuperar mi pedido** por si necesita volver a mandarlo.
+
 ---
 
 ## Preguntas frecuentes
 
-**¿Por qué no veo el cambio de inmediato en el sitio?**
-El menú se guarda en cuanto cambias algo, pero el sitio puede tardar unos segundos (hasta ~1 minuto) en mostrarlo por la caché. Recarga la página.
+**¿Los clientes tienen que recargar la página para ver mis cambios?**
+No. Precios, agotados, promos, categorías, horario y el resto se actualizan solos en el sitio de quien lo tenga abierto, normalmente en 10 a 30 segundos, y al volver a la página (por ejemplo, desde WhatsApp) se revisan de inmediato. Si el sitio y el panel están abiertos en dos pestañas del mismo navegador, el cambio se ve al instante. Si a un cliente se le agota algo que ya tenía en su pedido, el sitio lo quita y se lo avisa; si cambia un precio, recalcula el total y también se lo avisa.
 
 **Me sale “Otro dispositivo cambió el menú”.**
 Dos personas (o dos pantallas) editaron al mismo tiempo. Pulsa **Recargar** para ver lo más reciente y repite tu cambio. Así nadie pisa el trabajo del otro.

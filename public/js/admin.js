@@ -258,6 +258,12 @@
       const r = await api('PUT', '/api/menu', { menu: S.menu, baseRev: S.rev });
       S.rev = r.rev;
       if (sent === S.version) S.menu = r.menu;
+      // Avisa al sitio si está abierto en otra pestaña de este navegador, para que muestre el cambio de inmediato.
+      try {
+        localStorage.setItem('antojos_menu_ping', String(Date.now()));
+      } catch (e) {
+        /* sin aviso entre pestañas: el sitio se actualiza solo en unos segundos */
+      }
       return true;
     } catch (e) {
       if (e.status === 401) setSave('error', 'Tu sesión venció. Entra de nuevo para seguir guardando.', 'login');

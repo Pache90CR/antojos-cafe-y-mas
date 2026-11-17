@@ -48,7 +48,10 @@ async function cleanupImages(menu) {
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
-      const fresh = query(req).get('fresh') === '1';
+      const q = query(req);
+      const fresh = q.get('fresh') === '1';
+      // nocache=1: lectura directa de la base de datos, sin pasar por la caché (el sitio la usa al volver a la página).
+      const nocache = fresh || q.get('nocache') === '1';
       let storage = redis.enabled() ? 'redis' : 'none';
       let rev = 0;
       let menu = M.defaults();
@@ -69,9 +72,10 @@ module.exports = async function handler(req, res) {
         body.password = auth.passwordState();
       }
       // Solo se guarda en caché una lectura correcta de la base de datos; un fallo pasajero no debe quedarse pegado.
-      const cacheable = !fresh && storage === 'redis';
+      // La caché dura 10 s y el sitio cambia de dirección (?b=) cada 10 s, así que nadie ve un menú más viejo que eso.
+      const cacheable = !nocache && storage === 'redis';
       return json(res, 200, body, {
-        'Cache-Control': cacheable ? 'public, max-age=0, s-maxage=10, stale-while-revalidate=59' : 'no-store'
+        'Cache-Control': cacheable ? 'public, max-age=0, s-maxage=10' : 'no-store'
       });
     }
 
