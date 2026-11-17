@@ -541,6 +541,27 @@
     true
   );
 
+  /* ---------- acceso discreto al panel ---------- */
+  // Dos toques seguidos en el logo del encabezado abren /admin. Si ya hay sesión iniciada, entra directo.
+  (function () {
+    const logo = document.querySelector('.brand img');
+    if (!logo) return;
+    logo.style.touchAction = 'manipulation';
+    logo.style.webkitUserSelect = 'none';
+    logo.style.userSelect = 'none';
+    logo.draggable = false;
+    let last = -1e9;
+    logo.addEventListener('click', (e) => {
+      if (e.timeStamp - last <= 450) {
+        last = -1e9;
+        e.preventDefault();
+        location.assign('/admin');
+      } else {
+        last = e.timeStamp;
+      }
+    });
+  })();
+
   /* ---------- arranque y actualización ---------- */
   function showLoadError() {
     $('#grid').hidden = true;
