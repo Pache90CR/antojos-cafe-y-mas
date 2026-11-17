@@ -185,7 +185,9 @@
     $('#waChat').href = A.waLink(wa, '¡Hola! Quisiera hacer un pedido.');
     $('#tabWa').href = A.waLink(wa, '¡Hola! Quisiera hacer un pedido.');
     $('#orderSub').textContent = 'Escríbenos al ' + phone + ' y arma tu pedido.';
-    $('#stickerPhone').textContent = phone;
+    const sp = $('#stickerPhone');
+    sp.textContent = phone;
+    sp.hidden = phone.length > 9; // solo cabe un número local; el resto ya aparece en el texto de al lado
 
     const names = shownCats().map((c) => c.name);
     $('#heroTitle').textContent = st.heroTitle || A.joinNames(names);
@@ -234,7 +236,7 @@
   function renderChips() {
     const items = [{ id: 'todo', name: 'Todo', ic: 'grid' }];
     if (visibleProducts().some((p) => A.promoOn(p, S.today))) items.push({ id: 'promos', name: 'Promos', ic: 'tag' });
-    shownCats().forEach((c) => items.push({ id: c.id, name: c.name, ic: A.categoryIcon(c.name) }));
+    shownCats().forEach((c) => items.push({ id: c.id, name: c.name, ic: A.catIcon(c) }));
     if (!items.some((i) => i.id === S.cat)) S.cat = 'todo';
     $('#chips').innerHTML = items
       .map(

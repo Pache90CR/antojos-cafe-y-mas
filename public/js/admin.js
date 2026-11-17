@@ -17,7 +17,7 @@
     { id: 'ajustes', label: 'Ajustes', ic: 'sliders' }
   ];
 
-  const S = { token: '', storage: 'redis', menu: null, rev: 0, version: 0, save: 'idle', saveMsg: '', tab: 'productos', pq: '', pcat: 'all', sort: false, today: '' };
+  const S = { token: '', storage: 'redis', menu: null, rev: 0, version: 0, save: 'idle', saveMsg: '', tab: 'productos', pq: '', pcat: 'all', sort: false, today: '', newIcon: '' };
   let DRAFT = null; // borrador del producto o promo que se está editando
 
   /* ---------- utilidades ---------- */
@@ -150,7 +150,11 @@
     const uniqPromo = uniqIn();
     const categories = (Array.isArray(m.categories) ? m.categories : [])
       .filter((c) => c && str(c.name, 40))
-      .map((c) => ({ id: uniqCat(c.id, 'c'), name: str(c.name, 40), hidden: !!c.hidden }));
+      .map((c) => {
+        const o = { id: uniqCat(c.id, 'c'), name: str(c.name, 40), hidden: !!c.hidden };
+        if (A.CAT_ICONS.some((x) => x[0] === c.icon)) o.icon = c.icon;
+        return o;
+      });
     const catIds = new Set(categories.map((c) => c.id));
     const products = (Array.isArray(m.products) ? m.products : [])
       .filter((p) => p && str(p.name, 60))
@@ -399,6 +403,7 @@
 
   function setTab(id, keep) {
     S.tab = id;
+    if (!keep) S.newIcon = '';
     document.querySelectorAll('.tabbtn').forEach((b) => {
       if (b.getAttribute('data-tab') === id) b.setAttribute('aria-current', 'page');
       else b.removeAttribute('aria-current');
@@ -720,7 +725,7 @@
       .map((c, i) => {
         const n = S.menu.products.filter((p) => p.categoryId === c.id).length;
         return (
-          '<div class="crow"><div class="crow-top"><input class="fld" data-f="cname" data-id="' + esc(c.id) + '" value="' + esc(c.name) + '" maxlength="40" aria-label="Nombre de la categoría" autocomplete="off"></div>' +
+          '<div class="crow"><div class="crow-top"><button class="cic" type="button" data-act="cat-icon" data-id="' + esc(c.id) + '" aria-label="Cambiar el ícono de ' + esc(c.name) + '" title="Cambiar el ícono">' + icon(A.catIcon(c), 24) + '</button><input class="fld" data-f="cname" data-id="' + esc(c.id) + '" value="' + esc(c.name) + '" maxlength="40" aria-label="Nombre de la categoría" autocomplete="off"></div>' +
           '<div class="crow-act"><span class="hint">' + n + (n === 1 ? ' producto' : ' productos') + '</span>' +
           '<button class="rb sm" type="button" data-act="cat-up" data-id="' + esc(c.id) + '" aria-label="Subir ' + esc(c.name) + '"' + (i === 0 ? ' disabled' : '') + '>' + icon('up', 18) + '</button>' +
           '<button class="rb sm" type="button" data-act="cat-down" data-id="' + esc(c.id) + '" aria-label="Bajar ' + esc(c.name) + '"' + (i === cats.length - 1 ? ' disabled' : '') + '>' + icon('down', 18) + '</button>' +
@@ -730,9 +735,9 @@
       })
       .join('');
     return (
-      '<div class="vh"><h1>Categorías</h1></div><p class="hint" style="margin-bottom:12px">Agrupan el menú (por ejemplo Café, Waffles, Donas). Su orden aquí es el orden en el sitio. Para cambiar el nombre, edítalo directamente.</p>' +
+      '<div class="vh"><h1>Categorías</h1></div><p class="hint" style="margin-bottom:12px">Agrupan el menú (por ejemplo Café, Waffles, Donas). Su orden aquí es el orden en el sitio. Para cambiar el nombre, edítalo directamente; para cambiar el ícono, toca el círculo de la izquierda.</p>' +
       (rows || '<div class="empty"><h3>Aún no hay categorías</h3><p>Crea la primera con el campo de abajo.</p></div>') +
-      '<form class="addrow" id="catForm" novalidate><input class="fld" id="newCat" maxlength="40" placeholder="Nueva categoría, por ejemplo Sándwiches" aria-label="Nombre de la nueva categoría" autocomplete="off">' +
+      '<form class="addrow" id="catForm" novalidate><button class="cic" id="newCatIc" type="button" data-act="cat-icon-new" aria-label="Elegir el ícono de la nueva categoría" title="Elegir el ícono">' + icon(S.newIcon || A.categoryIcon(''), 24) + '</button><input class="fld" id="newCat" maxlength="40" placeholder="Nueva categoría" aria-label="Nombre de la nueva categoría" autocomplete="off">' +
       '<button class="btn accent" type="submit">' + icon('plus', 18) + 'Agregar</button></form>'
     );
   }
@@ -753,7 +758,10 @@
     let id = A.slug(name) || A.uid('c');
     let n = 2;
     while (ids.has(id)) id = (A.slug(name) || 'c') + '-' + n++;
-    commit((m) => m.categories.push({ id: id, name: name, hidden: false }));
+    const cat = { id: id, name: name, hidden: false };
+    if (S.newIcon) cat.icon = S.newIcon;
+    S.newIcon = '';
+    commit((m) => m.categories.push(cat));
     setTab('categorias', true);
     toast('Categoría agregada');
   }
@@ -784,6 +792,52 @@
       m.categories[j] = t;
     });
     setTab('categorias', true);
+  }
+
+  // Selector de ícono. target = id de la categoría, o '' para la categoría que se está creando.
+  function openIconPicker(target) {
+    const c = target ? S.menu.categories.find((x) => x.id === target) : null;
+    if (target && !c) return;
+    const typed = $('#newCat');
+    const cur = c ? A.catIcon(c) : S.newIcon || A.categoryIcon(typed ? typed.value : '');
+    showDlg(
+      '<div class="dlg-head"><h2>Elige un ícono</h2><button type="button" class="rb" data-act="dlg-close" aria-label="Cerrar">' + icon('close', 20) + '</button></div>' +
+      '<div class="dlg-body icon-body"><p class="hint">' + (c ? 'Se ve junto a “' + esc(c.name) + '” en el menú.' : 'Se verá junto a la nueva categoría en el menú.') + '</p>' +
+      '<div class="icons" role="group" aria-label="Íconos disponibles">' +
+      A.CAT_ICONS.map(
+        (x) =>
+          '<button type="button" class="ico' + (x[0] === cur ? ' on' : '') + '" data-act="pick-icon" data-icon="' + x[0] + '" data-target="' + esc(target || '') + '" aria-pressed="' + (x[0] === cur) + '" aria-label="' + esc(x[1]) + '">' +
+          icon(x[0], 28) + '<span>' + esc(x[1]) + '</span></button>'
+      ).join('') +
+      '</div></div>'
+    );
+    const on = dlg.querySelector('.ico.on');
+    if (on) {
+      on.focus();
+      on.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function pickIcon(ic, target) {
+    if (!A.CAT_ICONS.some((x) => x[0] === ic)) return;
+    closeDlg();
+    if (!target) {
+      S.newIcon = ic;
+      const b = $('#newCatIc');
+      if (b) b.innerHTML = icon(ic, 24);
+      const inp = $('#newCat');
+      if (inp) inp.focus();
+      return;
+    }
+    const c = S.menu.categories.find((x) => x.id === target);
+    if (!c) return;
+    if (c.icon !== ic) {
+      commit((m) => {
+        m.categories.find((x) => x.id === target).icon = ic;
+      });
+    }
+    setTab('categorias', true);
+    toast('Ícono actualizado');
   }
 
   /* ---------- promos ---------- */
@@ -1133,6 +1187,11 @@
       if (d !== t.value) t.value = d;
       return;
     }
+    if (t.id === 'newCat') {
+      const b = $('#newCatIc');
+      if (b && !S.newIcon) b.innerHTML = icon(A.categoryIcon(t.value), 24);
+      return;
+    }
     const f = t.getAttribute && t.getAttribute('data-f');
     if (f && (f === 'name' || f === 'address' || f === 'heroTitle' || f === 'orderIntro' || f === 'closedMessage' || f === 'cname')) {
       clearTimeout(t._t);
@@ -1203,6 +1262,12 @@
         return moveProduct(id, -1);
       case 'move-down':
         return moveProduct(id, 1);
+      case 'cat-icon':
+        return openIconPicker(id);
+      case 'cat-icon-new':
+        return openIconPicker('');
+      case 'pick-icon':
+        return pickIcon(t.getAttribute('data-icon'), t.getAttribute('data-target'));
       case 'cat-up':
         return moveCategory(id, -1);
       case 'cat-down':

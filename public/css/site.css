@@ -112,7 +112,7 @@ img{max-width:100%}
 .chip-ic{width:60px;height:60px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--card);border:1.5px solid var(--line);transition:background-color .15s,border-color .15s,color .15s}
 .chip:hover .chip-ic{border-color:var(--ink)}
 .chip.on .chip-ic{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-.chip-lb{max-width:84px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2;overflow-wrap:anywhere}
+.chip-lb{max-width:104px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2;overflow-wrap:anywhere}
 
 /* menú */
 .sec-menu{padding-top:30px;scroll-margin-top:84px}
@@ -148,14 +148,19 @@ img{max-width:100%}
 
 /* pedir por WhatsApp */
 .sec-order{padding-top:38px;scroll-margin-top:84px}
-.order-banner{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:220px;padding:clamp(22px,4vw,40px);border-radius:28px;background:var(--tile)}
-.order-txt{flex:1 1 0;min-width:0}
-.kicker{color:var(--kicker);font-size:12px;font-weight:800;letter-spacing:.16em}
-.order-banner h2{margin-top:6px;font-family:var(--serif);font-size:clamp(26px,5vw,42px);font-weight:700;line-height:1.08;letter-spacing:-.01em}
-.order-sub{max-width:40ch;margin:10px 0 16px;color:var(--muted);font-size:15px}
-.sticker{flex:none;width:clamp(96px,22vw,150px);aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:50%;background:var(--caramel);color:var(--ink);box-shadow:inset 0 0 0 4px var(--caramel),inset 0 0 0 6.5px var(--ink);text-align:center;transform:rotate(-8deg)}
-.sticker-1{font-size:clamp(11px,1.6vw,14px);font-weight:800;letter-spacing:.04em}
-.sticker-2{font-family:var(--serif);font-size:clamp(14px,2.2vw,20px);font-weight:700;line-height:1;padding:0 6px}
+.order-banner{--st:clamp(108px,22vw,150px);position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"k s" "h s" "p s" "b b";column-gap:16px;align-content:center;align-items:start;min-height:220px;padding:clamp(22px,4vw,40px);border-radius:28px;background:var(--tile)}
+.order-txt{display:contents}
+.kicker{grid-area:k;color:var(--kicker);font-size:12px;font-weight:800;letter-spacing:.16em}
+.order-banner h2{grid-area:h;margin-top:6px;font-family:var(--serif);font-size:clamp(26px,5vw,42px);font-weight:700;line-height:1.08;letter-spacing:-.01em}
+.order-sub{grid-area:p;max-width:40ch;margin:10px 0 16px;color:var(--muted);font-size:15px}
+.order-banner .cta{grid-area:b;justify-self:start;white-space:nowrap}
+/* El sello se dimensiona con una sola medida (--st) para que el texto siempre quepa dentro del círculo. */
+.sticker{grid-area:s;align-self:center;justify-self:end;width:var(--st);aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--st)*.018);border-radius:50%;background:var(--caramel);color:var(--ink);box-shadow:inset 0 0 0 calc(var(--st)*.04) var(--caramel),inset 0 0 0 calc(var(--st)*.068) var(--ink);text-align:center;transform:rotate(-8deg)}
+.sticker .i svg{display:block;width:calc(var(--st)*.24);height:calc(var(--st)*.24)}
+.sticker-1{font-size:calc(var(--st)*.115);font-weight:800;letter-spacing:.03em;line-height:1}
+.sticker-2{font-family:var(--serif);font-size:calc(var(--st)*.105);font-weight:700;line-height:1;white-space:nowrap}
+@media (min-width:600px){.order-banner{grid-template-areas:"k s" "h s" "p s" "b s"}}
+@media (max-width:349px){.order-banner{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "h" "p" "b"}.sticker{display:none}}
 
 /* pie */
 .ftr{flex:none;margin-top:44px;padding:clamp(32px,6vw,56px) 0 clamp(28px,4vw,40px);background:var(--ink);color:var(--bg);scroll-margin-top:84px;display:flex;flex-direction:column;gap:32px}
