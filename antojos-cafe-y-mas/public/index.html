@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antojos, Café y Más · Menú y pedidos por WhatsApp</title>
+<meta name="description" content="Mira el menú de Antojos, Café y Más y envía tu pedido por WhatsApp.">
+<meta name="theme-color" content="#FCF6EA">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Antojos, Café y Más">
+<meta property="og:description" content="Mira el menú y envía tu pedido por WhatsApp.">
+<meta property="og:image" content="/assets/og-image.png">
+<link rel="icon" href="/assets/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Nunito:wght@400;600;700;800&amp;display=swap">
+<link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+<a class="skip" href="#menu">Saltar al menú</a>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <a class="brand" href="#inicio" aria-label="Ir al inicio">
+      <img src="/assets/logo-sm.webp" alt="" width="54" height="49">
+      <span class="brand-txt"><span class="brand-1" id="brand1">Antojos</span><span class="brand-2" id="brand2">CAFÉ Y MÁS</span></span>
+    </a>
+    <nav class="nav-desk" aria-label="Principal">
+      <a class="lnk" href="#inicio">Inicio</a>
+      <a class="lnk" href="#menu">Menú</a>
+      <a class="lnk" href="#pedir">Pedir</a>
+      <a class="lnk" href="#contacto">Contacto</a>
+    </nav>
+    <div class="hdr-act">
+      <a class="rb" id="telBtn" href="tel:+50670668903" aria-label="Llamar"><span class="i" data-icon="phone" data-size="20"></span></a>
+      <button class="rb" type="button" data-act="open-cart" id="cartBtn" aria-label="Ver mi pedido"><span class="i" data-icon="cart" data-size="21"></span><span class="badge" id="cartBadge" hidden>0</span></button>
+    </div>
+  </div>
+</header>
+<div id="status" class="status" role="status" aria-live="polite" hidden></div>
+
+<main>
+  <div class="wrap sec-search">
+    <div class="search-box">
+      <label class="sbox">
+        <span class="i" data-icon="search" data-size="20"></span>
+        <input class="srch" id="q" type="search" placeholder="Busca en el menú…" aria-label="Buscar en el menú" autocomplete="off">
+        <button class="rb rb-sm" type="button" id="qClear" data-act="clear-q" aria-label="Borrar búsqueda" hidden><span class="i" data-icon="close" data-size="16"></span></button>
+      </label>
+      <div class="sres" id="qRes" hidden></div>
+    </div>
+  </div>
+
+  <section id="inicio" class="wrap sec-hero">
+    <div class="hero dk">
+      <div class="hero-line" aria-hidden="true"></div>
+      <div class="hero-txt">
+        <p class="hero-kicker">Hoy se te antoja</p>
+        <h1 id="heroTitle">Café, waffles y donas</h1>
+        <p class="hero-sub">Pide lo que se te antoje y envíalo por WhatsApp.</p>
+        <a class="cta" href="#menu">PEDIR AHORA<span class="cta-ar"><span class="i" data-icon="arrow" data-size="16"></span></span></a>
+      </div>
+      <div class="hero-img"><img src="/assets/logo.webp" alt="Logo de Antojos, Café y Más" width="1000" height="909"></div>
+    </div>
+  </section>
+
+  <section id="promos" class="wrap sec-promos" aria-label="Promociones" hidden>
+    <div class="promo-list" id="promoList"></div>
+  </section>
+
+  <section class="wrap sec-chips" aria-label="Categorías del menú">
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section id="menu" class="wrap sec-menu">
+    <div class="menu-head">
+      <h2>Nuestro menú</h2>
+      <p id="countLabel"></p>
+    </div>
+    <div class="grid" id="grid" aria-live="polite">
+      <div class="card sk"></div><div class="card sk"></div><div class="card sk"></div><div class="card sk"></div>
+    </div>
+    <div class="empty" id="empty" hidden></div>
+  </section>
+
+  <section id="pedir" class="wrap sec-order">
+    <div class="order-banner">
+      <div class="order-txt">
+        <p class="kicker">PIDE POR WHATSAPP</p>
+        <h2>¿Se te antojó algo?</h2>
+        <p class="order-sub" id="orderSub">Escríbenos y arma tu pedido.</p>
+        <a class="cta cta-dk" id="waChat" href="#" target="_blank" rel="noopener">ABRIR WHATSAPP<span class="cta-ar"><span class="i" data-icon="arrow" data-size="16"></span></span></a>
+      </div>
+      <div class="sticker" aria-hidden="true">
+        <span class="i" data-icon="chat" data-size="28"></span>
+        <span class="sticker-1">WhatsApp</span>
+        <span class="sticker-2" id="stickerPhone"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="contacto" class="ftr dk">
+  <div class="wrap ftr-main">
+    <img src="/assets/logo-sm.webp" alt="" width="130" height="118" class="ftr-logo">
+    <div class="ftr-col">
+      <h2>CONTACTO</h2>
+      <div><p class="ftr-lbl">Teléfono y WhatsApp</p><a id="ftrTel" href="#" class="ftr-tel"></a></div>
+      <div id="ftrAddr" hidden><p class="ftr-lbl">Dirección</p><p class="ftr-val" id="ftrAddrTxt"></p></div>
+      <div id="ftrHours" hidden><p class="ftr-lbl">Horario</p><ul class="hours" id="ftrHoursList"></ul></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <p class="copy" id="copy">© Antojos, Café y Más</p>
+  </div>
+</footer>
+
+<nav class="nav-mob" aria-label="Navegación inferior">
+  <a class="tab" href="#inicio"><span class="i" data-icon="home" data-size="22"></span><span>Inicio</span></a>
+  <a class="tab" href="#menu"><span class="i" data-icon="book" data-size="22"></span><span>Menú</span></a>
+  <button class="fab" type="button" data-act="open-cart" id="fabBtn" aria-label="Ver mi pedido"><span class="i" data-icon="cup" data-size="22"></span><span>Pedido</span><span class="badge badge-fab" id="fabBadge" hidden>0</span></button>
+  <a class="tab" id="tabWa" href="#" target="_blank" rel="noopener"><span class="i" data-icon="chat" data-size="22"></span><span>WhatsApp</span></a>
+  <a class="tab" href="#contacto"><span class="i" data-icon="phone" data-size="22"></span><span>Contacto</span></a>
+</nav>
+
+<div class="toast dk" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toastTxt"></span>
+  <button class="toast-btn" type="button" id="toastBtn" data-act="open-cart">Ver pedido</button>
+</div>
+
+<dialog class="cart" id="cart" aria-label="Tu pedido">
+  <div class="cart-head">
+    <h2>Tu pedido</h2>
+    <button class="rb" type="button" data-act="close-cart" aria-label="Cerrar pedido"><span class="i" data-icon="close" data-size="20"></span></button>
+  </div>
+  <div class="cart-body" id="cartBody"></div>
+  <div class="cart-foot" id="cartFoot" hidden>
+    <div class="total-row" id="totalRow" hidden><span>Total</span><strong id="total"></strong></div>
+    <label class="lbl"><span>Tu nombre (opcional)</span><input class="fld" id="custName" type="text" autocomplete="given-name" placeholder="Nombre" maxlength="60"></label>
+    <label class="lbl"><span>Notas (opcional)</span><textarea class="fld" id="custNotes" rows="2" placeholder="Para llevar, sin azúcar, entrega…" maxlength="300"></textarea></label>
+    <p class="closed-note" id="closedNote" hidden></p>
+    <a class="cta cta-dk cta-wide" id="send" href="#" target="_blank" rel="noopener">ENVIAR POR WHATSAPP<span class="cta-ar"><span class="i" data-icon="arrow" data-size="16"></span></span></a>
+    <button class="linkbtn" type="button" data-act="clear">Vaciar pedido</button>
+  </div>
+</dialog>
+
+<noscript><p style="padding:24px;text-align:center">Activa JavaScript para ver el menú y hacer tu pedido.</p></noscript>
+<script src="/js/common.js"></script>
+<script src="/js/site.js"></script>
+</body>
+</html>

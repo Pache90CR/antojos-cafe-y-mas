@@ -1,0 +1,37 @@
+{
+  "settings": {
+    "name": "Antojos, Café y Más",
+    "whatsapp": "50670668903",
+    "address": "",
+    "heroTitle": "",
+    "orderIntro": "¡Hola! Quiero hacer un pedido en Antojos, Café y Más:",
+    "mode": "open",
+    "closedMessage": "",
+    "acceptWhenClosed": false,
+    "schedule": {
+      "mon": { "open": false, "from": "08:00", "to": "17:00" },
+      "tue": { "open": false, "from": "08:00", "to": "17:00" },
+      "wed": { "open": false, "from": "08:00", "to": "17:00" },
+      "thu": { "open": false, "from": "08:00", "to": "17:00" },
+      "fri": { "open": false, "from": "08:00", "to": "17:00" },
+      "sat": { "open": false, "from": "08:00", "to": "17:00" },
+      "sun": { "open": false, "from": "08:00", "to": "17:00" }
+    }
+  },
+  "categories": [
+    { "id": "cafe", "name": "Café", "hidden": false },
+    { "id": "waffles", "name": "Waffles", "hidden": false },
+    { "id": "donas", "name": "Donas", "hidden": false }
+  ],
+  "products": [
+    { "id": "cafe", "categoryId": "cafe", "name": "Café", "desc": "Café caliente para acompañar tu antojo.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/cafe.svg", "soldOut": false, "hidden": false },
+    { "id": "capuchino", "categoryId": "cafe", "name": "Capuchino", "desc": "Espresso con leche vaporizada y espuma.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/capuchino.svg", "soldOut": false, "hidden": false },
+    { "id": "latte", "categoryId": "cafe", "name": "Latte", "desc": "Espresso con abundante leche cremosa.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/latte.svg", "soldOut": false, "hidden": false },
+    { "id": "waffle-mantequilla", "categoryId": "waffles", "name": "Waffle con mantequilla y miel", "desc": "Waffle caliente con mantequilla y miel.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/waffle-mantequilla.svg", "soldOut": false, "hidden": false },
+    { "id": "waffle-fresas", "categoryId": "waffles", "name": "Waffle con fresas y crema", "desc": "Waffle con fresas y crema batida.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/waffle-fresas.svg", "soldOut": false, "hidden": false },
+    { "id": "dona-confites", "categoryId": "donas", "name": "Dona con confites", "desc": "Dona glaseada con confites de colores.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/dona-confites.svg", "soldOut": false, "hidden": false },
+    { "id": "dona-glaseada", "categoryId": "donas", "name": "Dona glaseada", "desc": "Dona suave con glaseado dulce.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/dona-glaseada.svg", "soldOut": false, "hidden": false },
+    { "id": "dona-chocolate", "categoryId": "donas", "name": "Dona de chocolate", "desc": "Dona con cobertura de chocolate.", "price": null, "promoPrice": null, "promoLabel": "", "promoUntil": "", "image": "/assets/art/dona-chocolate.svg", "soldOut": false, "hidden": false }
+  ],
+  "promos": []
+}
